@@ -54,6 +54,8 @@ fi
 
 touch $REPORT
 
+echo "Executed: $DATE" >> $REPORT
+
 # 1) Hostname
 get_hostname() {
   echo "Grabbing hostname"
