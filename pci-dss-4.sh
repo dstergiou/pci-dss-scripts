@@ -101,8 +101,8 @@ get_admin_users() {
 
 # 6) Last security patch installed
 get_latest_patches() {
-    echo "Grabbing last 25 patches installed"
-    last_patch=$(grep "installed" /var/log/dpkg.log | grep -v "not-installed" | grep -v "half-installed" | sort -rn | tail -n 25)
+    echo "Grabbing last patches installed"
+    last_patch=$(grep "installed" /var/log/dpkg.log /var/log/dpkg.log.1 | grep -v "not-installed" | grep -v "half-installed" | sort -rn)
     echo "6) Last 25 patches installed" >> $REPORT
     echo "$last_patch" >> $REPORT
     echo "" >> $REPORT
@@ -150,6 +150,9 @@ get_password_configuration() {
     idle_reauth=$(grep -E 'idle' /etc/pam.d/common-auth | awk '{print $2}')
     echo "Re-authentication for idle session: $idle_reauth" >> $REPORT
 
+    ssh_password_auth=$(grep -E '^PasswordAuthentication' /etc/ssh/sshd_config)
+    echo "SSHD password authentication: $ssh_password_auth" >> $REPORT
+
     echo "" >> $REPORT
 }
 
@@ -161,8 +164,8 @@ get_audit_log_settings() {
     datadog_status=$(systemctl is-active datadog-agent)
     echo "Datadog agent service status: $datadog_status" >> $REPORT
 
-    datadog_config_file=$(grep -E 'conf' /etc/datadog-agent/datadog.yaml)
-    echo "Datadog configuration file: $datadog_config_file" >> $REPORT
+    datadog_config_file=$(grep -E 'logs_enabled' /etc/datadog-agent/datadog.yaml)
+    echo "Datadog logs: $datadog_config_file" >> $REPORT
 
     datadog_version=$(datadog-agent version)
     echo "Datadog agent version: $datadog_version" >> $REPORT
@@ -209,8 +212,26 @@ get_antivirus() {
 get_file_integrity_monitoring() {
     echo "Grabbing File Integrity Monitoring"
     echo "14) File Integrity Monitoring" >> $REPORT
-    fim=$(ps aux | grep -i aide | grep -v grep)
-    echo "$fim" >> $REPORT
+
+    aide_installed=$(dpkg-query -s aide &>/dev/null && echo "AIDE is installed")
+    echo $aide_installed >> $REPORT
+
+    aide_cron="/etc/cron.daily/aide"
+    aide_config="/etc/aide/aide.conf"
+    aide_db="/var/lib/aide/aide.db"
+
+    if [ -e $aide_cron ]; then
+        echo "AIDE running: $aide_cron" >> $REPORT
+    fi
+
+    if [ -e $aide_config ]; then
+        echo "AIDE config: $aide_config" >> $REPORT
+    fi
+
+    if [ -e $aide_db ]; then
+        echo "AIDE DB: $aide_db" >> $REPORT
+    fi
+
     echo "" >> $REPORT
 
 }
